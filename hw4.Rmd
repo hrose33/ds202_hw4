@@ -1,0 +1,106 @@
+---
+title: Homework 4
+author: Hunter Rose; hrose33
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+```{r}
+dat <- datasets::ChickWeight
+```
+
+```{r}
+weight0 <- dat %>%
+filter(Time == 0) %>%
+group_by(Diet) %>%
+summarize(average_weight = mean(weight, na.rm = TRUE),
+sd_weight = sd(weight, na.rm = TRUE))
+weight0
+```
+
+```{r}
+complete <- dat %>%
+  select(Chick, weight, Time, Diet) %>%
+  group_by(Chick) %>%
+  mutate(total_obs = n()) %>%
+  filter(total_obs > 11) %>%
+  as_data_frame()
+head(complete, 3)
+```
+
+```{r}
+complete <- complete %>%
+  select(Chick, weight, Time, Diet) %>%
+  group_by(Chick) %>%
+  mutate(startweight = weight[Time == 0])
+```
+```{r}
+complete <- complete %>%
+  select(Chick, weight, Time, Diet, startweight) %>%
+  group_by(Chick)%>%
+  mutate(weightgain = weight - startweight)
+head(complete, 3)
+```
+
+```{r}
+medians = complete %>%
+  group_by(Diet) %>%
+  summarize(median = median(weightgain)) %>%
+  arrange(median)
+complete %>%
+  filter(Time ==21) %>%
+  ggplot(aes(x=Diet, y=weightgain)) + geom_boxplot()
+```
+
+```{r}
+maxChick <- complete %>%
+  filter(weightgain == max(weightgain)) %>%
+  arrange(desc(weightgain))
+minChick <- complete %>%
+  filter(weightgain == min(weightgain)) %>%
+  arrange(weightgain)
+head(maxChick, 1)
+head(minChick, 1)
+```
+As we can see above, the chick with the highest weight gain was chick 35 on diet 3. Their weight gain came out to 332. The chick with the lowest weight gain was chick 3 on diet 1, who actually lost weight (-4). 
+
+```{r}
+minC <- complete %>%
+  filter(Chick == 3)
+maxC <- complete %>%
+  filter(Chick == 35)
+ggplot() +
+  geom_line(data=minC, aes(x=Time, y=weight), color='green') +
+  geom_line(data=maxC, aes(x=Time, y=weight), color='red') 
+```
+
+```{r}
+averageC <- complete %>%
+  select(Chick, weight, Time) %>%
+  group_by(Time) %>%
+  summarize(average_weight = mean(weight))
+ggplot() +
+  geom_line(data=minC, aes(x=Time, y=weight), color='green') +
+  geom_line(data=maxC, aes(x=Time, y=weight), color='red') +
+  geom_line(data=averageC, aes(x=Time, y=average_weight), color='blue')
+```
+
+The average trajectory line is very close to the minimum weight gain line. The Max line starts getting exponentially bigger around the time = 10 mark. 
+
+
+One of my questions was which chick had the highest standard deviation for their weight gain? What diet where they on?
+```{r}
+complete %>%
+  select(Chick, weight, Time, weightgain, Diet) %>%
+  group_by(Chick, Diet) %>%
+  summarize(sd_weightgain = sd(weightgain)) %>%
+  arrange(desc(sd_weightgain))
+```
+
+Chick 35 is the chick with the highest weight gain overall, and also the highest standard deviation. This shows that this growth was consistently high period over period.
